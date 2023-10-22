@@ -30,9 +30,9 @@ Available tasks:
 - **download**: Download the zipped (.gz) log files from the named server.
 - **unzip**: Decompress the .gz files previously downloaded.
 - **filter**: Create a file only containg hits to the target site.
-- **divide**: Divide the filtered file into two files, one containing googlebot hits and the other containing everything else.
+- **divide**: Divide the filtered file into one file containing googlebot hits and another containing everything else.
 
-**Note**: Tasks depend on a PREFIX/month/type/server_name file structure ( ex. ~/june/unzipped/iss), and the assumption that compressed log files have an *nginx_access.log-20230909.gz* naming scheme.
+**Note**: Tasks depend on a *PREFIX/month/type/server_name* file structure ( ex. ~/june/unzipped/iss), and the assumption that compressed log files have an *nginx_access.log-20230909.gz* naming scheme.
 
 ## License
 

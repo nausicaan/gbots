@@ -1,2 +1,15 @@
+# Folders and files
 /target
 /src/tasks/vars.rs
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Default desktop settings files
+.DS_Store
+Thumbs.db
+.idea
