@@ -5,11 +5,8 @@ mod tasks;
 const HALT: &'static str = "program halted ";
 
 fn main() {
-    let mut months: HashMap<String, String> = HashMap::new();
     let passed: Vec<String> = env::args().collect();
-    let month: &String = &passed[2];
-    let task: &String = &passed[1];
-    let filter: &str = &passed[3];
+    let mut months: HashMap<String, String> = HashMap::new();
 
     // Insert some key-value pairs into months
     months.insert(String::from(tasks::NAMES[0]), String::from("01"));
@@ -26,10 +23,13 @@ fn main() {
     months.insert(String::from(tasks::NAMES[11]), String::from("12"));
 
     if passed.len() > 1 {
+        let task: &String = &passed[1];
+        let month: &String = &passed[2];
         let days: Vec<String> = tasks::generate(&months, &month);
+        // let site: &str = &passed[3];
         if task == "download" {
             message("Downloading Compressed Log Files");
-            tasks::download(&months, &month, "/zipped/", &days);
+            tasks::download(&months, &month, &days);
             println!();
         } else if task == "unzip" {
             message("Unzipping Compressed Log Files");
@@ -37,11 +37,11 @@ fn main() {
             println!();
         } else if task == "filter" {
             message("Searching for Hits to Target URL");
-            tasks::manipulate(&month, "/unzipped/", "filtered for emergencyinfobc hits", &filter);
+            tasks::manipulate(&("filtered for ".to_owned() + &passed[3] + " hits"), &month, "/unzipped/",  &passed[3]);
             println!();
         } else if task == "divide" {
             message("Dividing Data into Google and Non-Google Hits");
-            tasks::manipulate(&month, "/filtered/", "divided", &filter);
+            tasks::manipulate("divided", &month, "/filtered/",  &passed[3]);
             println!();
         } else {
             warn(" Arguments not recognized ");
@@ -53,18 +53,15 @@ fn main() {
 
 // Print informational messages
 fn message(content: &str) {
-    println!();
-    println!("{} {} {}", "**".yellow(), content, "**".yellow());
+    println!("\n{} {} {}", "**".yellow(), content, "**".yellow());
 }
 
 // Print colourized warning messages
 fn warn(content: &str) {
-    println!();
-    println!("{}", content.on_yellow());
+    println!("\n{}", content.on_yellow());
 }
 
 // Print colourized error messages
 fn alert(content: &str) {
-    println!();
-    println!("{}{}", content.on_bright_red(), HALT.on_bright_red());
+    println!("\n{}{}", content.on_bright_red(), HALT.on_bright_red());
 }

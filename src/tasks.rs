@@ -12,15 +12,13 @@ use flate2::read::GzDecoder;
 use colored::Colorize;
 mod vars;
 
-
+// Insert some key-value pairs into days
 pub static NAMES: [&str; 12] = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "novemeber", "december"];
-
-
 
 // Create a slice with the appropriate number of days for that month
 pub fn generate(months: &HashMap<String, String>, month: &String) -> Vec<String> {
     let mut days: HashMap<String, i32> = HashMap::new();
-    let mut zeros: Vec<String> = Vec::new();
+    let mut digits: Vec<String> = Vec::new();
     let mut counter: i32 = 10;
 
     // Insert some key-value pairs into days
@@ -37,36 +35,36 @@ pub fn generate(months: &HashMap<String, String>, month: &String) -> Vec<String>
     days.insert(String::from(NAMES[10]), 30);
     days.insert(String::from(NAMES[11]), 31);
 
-    zeros.push(String::from("01"));
-    zeros.push(String::from("02"));
-    zeros.push(String::from("03"));
-    zeros.push(String::from("04"));
-    zeros.push(String::from("05"));
-    zeros.push(String::from("06"));
-    zeros.push(String::from("07"));
-    zeros.push(String::from("08"));
-    zeros.push(String::from("09"));
+    digits.push(String::from("01"));
+    digits.push(String::from("02"));
+    digits.push(String::from("03"));
+    digits.push(String::from("04"));
+    digits.push(String::from("05"));
+    digits.push(String::from("06"));
+    digits.push(String::from("07"));
+    digits.push(String::from("08"));
+    digits.push(String::from("09"));
 
-    for element in months {
+    for element in months.iter() {
         if month == element.0 {
             while counter <= days[element.0] {
-                zeros.push(counter.to_string());
+                digits.push(counter.to_string());
                 counter += 1;
             }
         }
     }
-    zeros
+    digits
 }
 
 
 // Download the log files from freedom.bcgov
-pub fn download(months: &HashMap<String, String>, month: &String, folder: &str, days: &Vec<String>) {
-    for server in vars::SERVERS {
-        let destination: String = vars::PREFIX.to_owned() + month + folder + server;
+pub fn download(months: &HashMap<String, String>, month: &String, days: &Vec<String>) {
+    for server in vars::SERVERS.iter() {
+        let destination: String = vars::PREFIX.to_owned() + server + "/zipped/" + month;
         let mut stdout = stdout();
         let mut index: usize = 0;
 
-        for day in days {
+        for day in days.iter() {
             let source: String = String::from(vars::IDENTITY.to_owned() + server + "/nginx_access.log-2023" + &day + ".gz ");
             Command::new("scp")
             .arg(&source)
@@ -83,17 +81,17 @@ pub fn download(months: &HashMap<String, String>, month: &String, folder: &str, 
 
 
 pub fn unzip(month: &String) {
-    for server in vars::SERVERS {
+    for server in vars::SERVERS.iter() {
         let mut index: usize = 0;
-        let files: Vec<String> = directory(vars::PREFIX.to_owned() + month + "/zipped/" + server);
+        let files: Vec<String> = directory(vars::PREFIX.to_owned() + server  + "/zipped/" + month);
         let mut stdout = stdout();
         let total: usize = files.len();
 
-        for file in files {
+        for file in files.iter() {
             let result: &str = &file.replace(".gz", "");
             let result: &str = &result.replace(".log-", "_");
             let result = result.to_owned() + ".log";
-            decompress(vars::PREFIX.to_owned() + month + "/zipped/" + server + "/" + &file, vars::PREFIX.to_owned() + month + "/unzipped/" + server + "/" + &result);
+            decompress(vars::PREFIX.to_owned() + server  + "/zipped/" + month + "/" + &file, vars::PREFIX.to_owned() + server + "/unzipped/" + month + "/" + &result);
             print!("\rFile {} ( {} of {} ) in {} unzipped   ", file.green(), (index + 1), total, server.yellow());
             stdout.flush().unwrap();
             sleep(Duration::from_millis(100));
@@ -103,18 +101,20 @@ pub fn unzip(month: &String) {
 }
 
 
-pub fn manipulate(month: &String, folder: &str, action: &str, filter: &str) {
-    for server in vars::SERVERS {
-        let files: Vec<String> = directory(vars::PREFIX.to_owned() + month + folder + server);
+pub fn manipulate(action: &str, month: &String, source: &str, site: &str) {
+
+    for server in vars::SERVERS.iter() {
+
+        let files: Vec<String> = directory(vars::PREFIX.to_owned() + server + source + month);
         let mut stdout = stdout();
         let total: usize = files.len();
         let mut index: usize = 0;
 
-        for file in files {
+        for file in files.iter() {
             if action == "divided" {
                 let _ = separate(&server, &file, &month);
             } else {
-                let _ = isolate(&server, &file, &month, &filter);
+                let _ = isolate(&server, &file, &month, &site);
             }
             print!("\rFile {} ( {} of {} ) in {} {}   ", file.green(), (index + 1), total, server.yellow(), action);
             stdout.flush().unwrap();
@@ -125,7 +125,7 @@ pub fn manipulate(month: &String, folder: &str, action: &str, filter: &str) {
 }
 
 
-/* ------------------------------------ Private Functions ------------------------------------------------------------- */
+/* ---------- Private Functions ---------- */
 
 
 fn directory(location: String) -> Vec<String> {
@@ -164,8 +164,9 @@ fn decompress(readfile: String, writefile: String) {
 }
 
 
-fn isolate(server: &str, filename: &String, month: &String, filter: &str) -> Result<()> {
-    let readfile: String = vars::PREFIX.to_owned() + month + "/unzipped/" + server + "/" + filename;
+// Search for Hits to the supplied Target URL
+fn isolate(server: &str, filename: &String, month: &String, site: &str) -> Result<()> {
+    let readfile: String = vars::PREFIX.to_owned() + server + "/unzipped/" + month + "/" + filename;
     let openfile: File = File::open(&readfile).expect("Unable to open file");
 
     let reader: BufReader<File> = BufReader::new(openfile);
@@ -173,20 +174,21 @@ fn isolate(server: &str, filename: &String, month: &String, filter: &str) -> Res
 
     for line in reader.lines() {
         let instance: String = line?;
-        if instance.contains(filter) {
+        if instance.contains(site) {
             eibc.push(instance);
         }
     }
 
-    let writefile: String = vars::PREFIX.to_owned() + month + "/filtered/" + server + "/" + filename;
+    let writefile: String = vars::PREFIX.to_owned() + server + "/filtered/" + "/" + month + "/" + filename;
     let _ = iterwrite(&eibc, &writefile, "");
 
     Ok(())
 }
 
 
+// Divide Data into Google and Non-Google Hits
 fn separate(server: &str, filename: &String, month: &String) -> Result<()> {
-    let readfile: String = vars::PREFIX.to_owned() + month + "/filtered/" + server + "/" + filename;
+    let readfile: String = vars::PREFIX.to_owned() + server + "/filtered/" + "/" + month + "/" + filename;
     let openfile: File = File::open(&readfile).expect("Unable to open file");
     let reader: BufReader<File> = BufReader::new(openfile);
     let mut obot: Vec<String> = Vec::new();
@@ -201,7 +203,7 @@ fn separate(server: &str, filename: &String, month: &String) -> Result<()> {
         }
     }
 
-    let trimfile: String = vars::PREFIX.to_owned() + month + "/divided/" + server + "/" + filename;
+    let trimfile: String = vars::PREFIX.to_owned() + server + "/divided/" + "/" + month + "/" + filename;
     let slash:Option<&str> = trimfile.strip_suffix(".log") ;
     let writefile: &str = slash.unwrap_or_default();
     let _ = iterwrite(&gbot, &writefile, "_google.log");
@@ -214,7 +216,7 @@ fn separate(server: &str, filename: &String, month: &String) -> Result<()> {
 fn iterwrite(container: &Vec<String>, destination: &str, extension: &str) -> Result<()> {
     let mut f2: File = File::create(destination.to_owned() + extension).expect("Unable to create file");
 
-    for element in container {
+    for element in container.iter() {
         writeln!(f2, "{}", element)?;
     }
 
