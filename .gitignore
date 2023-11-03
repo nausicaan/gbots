@@ -1,5 +1,6 @@
 # Folders and files
 /target
+/temp
 /src/tasks/vars.rs
 
 # Binaries for programs and plugins

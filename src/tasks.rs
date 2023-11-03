@@ -1,16 +1,9 @@
 
 // use std::io::{BufRead, BufReader, Result, Write, Read};
-use std::{
-    fs, fs::File,
-    io::{stdout, Write, BufRead, BufReader, Result, Read},
-    collections::HashMap,
-    process::Command,
-    thread::sleep,
-    time::Duration
-};
+use std::{fs, fs::File, io::{stdout, Write, BufRead, BufReader, Result, Read, Stdout}, collections::HashSet, collections::HashMap, process::Command, thread::sleep, time::Duration};
 use flate2::read::GzDecoder;
 use colored::Colorize;
-mod vars;
+pub mod vars;
 
 // Insert some key-value pairs into days
 pub static NAMES: [&str; 12] = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "novemeber", "december"];
@@ -35,6 +28,7 @@ pub fn generate(months: &HashMap<String, String>, month: &String) -> Vec<String>
     days.insert(String::from(NAMES[10]), 30);
     days.insert(String::from(NAMES[11]), 31);
 
+    // Push leading zero digits 01 - 09
     digits.push(String::from("01"));
     digits.push(String::from("02"));
     digits.push(String::from("03"));
@@ -45,7 +39,7 @@ pub fn generate(months: &HashMap<String, String>, month: &String) -> Vec<String>
     digits.push(String::from("08"));
     digits.push(String::from("09"));
 
-    for element in months.iter() {
+    for element in months {
         if month == element.0 {
             while counter <= days[element.0] {
                 digits.push(counter.to_string());
@@ -59,19 +53,20 @@ pub fn generate(months: &HashMap<String, String>, month: &String) -> Vec<String>
 
 // Download the log files from freedom.bcgov
 pub fn download(months: &HashMap<String, String>, month: &String, days: &Vec<String>) {
-    for server in vars::SERVERS.iter() {
+
+    for server in vars::SERVERS {
         let destination: String = vars::PREFIX.to_owned() + server + "/zipped/" + month;
-        let mut stdout = stdout();
+        let mut stdout: Stdout = stdout();
         let mut index: usize = 0;
 
-        for day in days.iter() {
+        for day in days {
             let source: String = String::from(vars::IDENTITY.to_owned() + server + "/nginx_access.log-2023" + &day + ".gz ");
             Command::new("scp")
             .arg(&source)
             .arg(&destination)
             .spawn()
             .expect("scp command failed to start");
-            print!("\rFile {}{}{} ( {} of {} ) in {} dowloaded   ", "nginx_access.log-2023".green(), months[month].green(), days[index].green(), (index + 1), days.len(), server.yellow());
+            print!("\rFile {}{}{} ( {} of {} ) in {} dowloaded ", "nginx_access.log-2023".green(), months[month].green(), days[index].green(), (index + 1), days.len(), server.yellow());
             stdout.flush().unwrap();
             sleep(Duration::from_millis(100));
             index += 1;
@@ -81,18 +76,19 @@ pub fn download(months: &HashMap<String, String>, month: &String, days: &Vec<Str
 
 
 pub fn unzip(month: &String) {
-    for server in vars::SERVERS.iter() {
+
+    for server in vars::SERVERS {
         let mut index: usize = 0;
         let files: Vec<String> = directory(vars::PREFIX.to_owned() + server  + "/zipped/" + month);
         let mut stdout = stdout();
         let total: usize = files.len();
 
-        for file in files.iter() {
+        for file in files {
             let result: &str = &file.replace(".gz", "");
             let result: &str = &result.replace(".log-", "_");
             let result = result.to_owned() + ".log";
             decompress(vars::PREFIX.to_owned() + server  + "/zipped/" + month + "/" + &file, vars::PREFIX.to_owned() + server + "/unzipped/" + month + "/" + &result);
-            print!("\rFile {} ( {} of {} ) in {} unzipped   ", file.green(), (index + 1), total, server.yellow());
+            print!("\rFile {} ( {} of {} ) in {} unzipped ", file.green(), (index + 1), total, server.yellow());
             stdout.flush().unwrap();
             sleep(Duration::from_millis(100));
             index += 1;
@@ -103,20 +99,19 @@ pub fn unzip(month: &String) {
 
 pub fn manipulate(action: &str, month: &String, source: &str, site: &str) {
 
-    for server in vars::SERVERS.iter() {
-
-        let files: Vec<String> = directory(vars::PREFIX.to_owned() + server + source + month);
+    for server in vars::SERVERS {
+        let files: Vec<String> = directory(vars::PREFIX.to_owned() + server + "/" + source + "/" + month);
         let mut stdout = stdout();
         let total: usize = files.len();
         let mut index: usize = 0;
 
-        for file in files.iter() {
+        for file in files {
             if action == "divided" {
                 let _ = separate(&server, &file, &month);
             } else {
                 let _ = isolate(&server, &file, &month, &site);
             }
-            print!("\rFile {} ( {} of {} ) in {} {}   ", file.green(), (index + 1), total, server.yellow(), action);
+            print!("\rFile {} ( {} of {} ) in {} {} ", file.green(), (index + 1), total, server.yellow(), action);
             stdout.flush().unwrap();
             sleep(Duration::from_millis(100));
             index += 1;
@@ -125,10 +120,83 @@ pub fn manipulate(action: &str, month: &String, source: &str, site: &str) {
 }
 
 
+pub fn pattern(month: &String) {
+    
+    for server in vars::SERVERS {
+        let files: Vec<String> = directory(vars::PREFIX.to_owned() + server + "/divided/" + month);
+        let mut stdout = stdout();
+        let total: usize = files.len();
+        let mut index: usize = 0;
+
+        for file in files {
+            let _ = search(server, &file, month);
+            print!("\rFile {} ( {} of {} ) in {} captured ", file.green(), (index + 1), total, server.yellow());
+            stdout.flush().unwrap();
+            sleep(Duration::from_millis(100));
+            index += 1;
+        }
+    }
+}
+
+
+pub fn _tally(month: &String) {
+    
+    for server in vars::SERVERS {
+        let files: Vec<String> = directory(vars::PREFIX.to_owned() + server + "/captured/" + month);
+        let mut stdout = stdout();
+        let total: usize = files.len();
+        let mut index: usize = 0;
+
+        for file in files {
+            let mut solution: Vec<String> = Vec::new();
+            solution.push(String::from("Count,Search_String\n"));
+            if let Ok(s) = transform(vars::PREFIX.to_owned() + server  + "/captured/" + month + "/" + &file) {
+                let duplicates: Vec<String> = doppleganger(&s);
+                for d in duplicates {
+                    let occurrences: usize = s.clone().iter().filter(|&s| s == &d).count();
+                    let data_to_append: String = occurrences.to_string() + "," + &d + "\n";
+                    solution.push(data_to_append);
+                }
+            }
+
+            let trimfile: String = vars::PREFIX.to_owned() + server + "/analyzed/" + month + "/" + &file;
+            let slash:Option<&str> = trimfile.strip_suffix(".log");
+            let writefile: &str = slash.unwrap_or_default();
+            let _ = iteratecsv(solution, writefile, ".csv");
+            print!("\rFile {} ( {} of {} ) in {} captured ", file.green(), (index + 1), total, server.yellow());
+            stdout.flush().unwrap();
+            sleep(Duration::from_millis(100));
+            index += 1;
+        }
+    }
+}
+
+pub fn single_tally(server: &str, month: &String, file: &str) {
+    print!("\rAnalyzing {} in {} ", file.green(), server.yellow());
+    let mut solution: Vec<String> = Vec::new();
+    solution.push(String::from("Count,Search_String\n"));
+
+    if let Ok(s) = transform(vars::PREFIX.to_owned() + server  + "/captured/" + month + "/" + &file) {
+        let duplicates: Vec<String> = doppleganger(&s);
+        for d in duplicates {
+            let occurrences: usize = s.clone().iter().filter(|&s| s == &d).count();
+            let dta: String = occurrences.to_string() + "," + &d + "\n";
+            solution.push(dta);
+        }
+    }
+
+    let trimfile: String = vars::PREFIX.to_owned() + server + "/analyzed/" + month + "/" + &file;
+    let slash:Option<&str> = trimfile.strip_suffix(".log");
+    let writefile: &str = slash.unwrap_or_default();
+    let _ = iteratecsv(solution, writefile, ".csv");
+}
+
+
 /* ---------- Private Functions ---------- */
 
 
 fn directory(location: String) -> Vec<String> {
+
     let mut nginx: Vec<String> = Vec::new();
 
     if let Ok(entries) = fs::read_dir(location) {
@@ -166,6 +234,7 @@ fn decompress(readfile: String, writefile: String) {
 
 // Search for Hits to the supplied Target URL
 fn isolate(server: &str, filename: &String, month: &String, site: &str) -> Result<()> {
+
     let readfile: String = vars::PREFIX.to_owned() + server + "/unzipped/" + month + "/" + filename;
     let openfile: File = File::open(&readfile).expect("Unable to open file");
 
@@ -179,8 +248,8 @@ fn isolate(server: &str, filename: &String, month: &String, site: &str) -> Resul
         }
     }
 
-    let writefile: String = vars::PREFIX.to_owned() + server + "/filtered/" + "/" + month + "/" + filename;
-    let _ = iterwrite(&eibc, &writefile, "");
+    let writefile: String = vars::PREFIX.to_owned() + server + "/filtered/" + month + "/" + filename;
+    let _ = iterwrite(eibc, &writefile, "");
 
     Ok(())
 }
@@ -188,7 +257,8 @@ fn isolate(server: &str, filename: &String, month: &String, site: &str) -> Resul
 
 // Divide Data into Google and Non-Google Hits
 fn separate(server: &str, filename: &String, month: &String) -> Result<()> {
-    let readfile: String = vars::PREFIX.to_owned() + server + "/filtered/" + "/" + month + "/" + filename;
+
+    let readfile: String = vars::PREFIX.to_owned() + server + "/filtered/" + month + "/" + filename;
     let openfile: File = File::open(&readfile).expect("Unable to open file");
     let reader: BufReader<File> = BufReader::new(openfile);
     let mut obot: Vec<String> = Vec::new();
@@ -203,21 +273,117 @@ fn separate(server: &str, filename: &String, month: &String) -> Result<()> {
         }
     }
 
-    let trimfile: String = vars::PREFIX.to_owned() + server + "/divided/" + "/" + month + "/" + filename;
-    let slash:Option<&str> = trimfile.strip_suffix(".log") ;
+    let trimfile: String = vars::PREFIX.to_owned() + server + "/divided/" + month + "/" + filename;
+    let slash:Option<&str> = trimfile.strip_suffix(".log");
     let writefile: &str = slash.unwrap_or_default();
-    let _ = iterwrite(&gbot, &writefile, "_google.log");
-    let _ = iterwrite(&obot, &writefile, "_other.log");
+    let _ = iterwrite(gbot, &writefile, "_google.log");
+    let _ = iterwrite(obot, &writefile, "_others.log");
 
     Ok(())
 }
 
 
-fn iterwrite(container: &Vec<String>, destination: &str, extension: &str) -> Result<()> {
+// Divide Data into Google and Non-Google Hits
+fn search(server: &str, filename: &String, month: &String) -> Result<()> {
+
+    let readfile: String = vars::PREFIX.to_owned() + server + "/divided/" + "/" + month + "/" + filename;
+    let openfile: File = File::open(&readfile).expect("Unable to open file");
+    let reader: BufReader<File> = BufReader::new(openfile);
+    let mut extracted: Vec<String> = Vec::new();
+    let mut gotcha: String;
+
+    for line in reader.lines() {
+        let instance: String = line?;
+        if instance.contains("\"GET ") {
+            gotcha = extract(instance, "\"GET ", " HTTP/");
+        } else if instance.contains("\"POST ") {
+            gotcha = extract(instance, "\"POST ", " HTTP/");
+        } else if instance.contains("\"HEAD ") {
+            gotcha = extract(instance, "\"HEAD ", " HTTP/");
+        } else {
+            gotcha = extract(instance, "] \"", "\"");
+        }
+        extracted.push(gotcha);
+    }
+
+    let trimfile: String = vars::PREFIX.to_owned() + server + "/captured/" + month + "/" + filename;
+    let slash:Option<&str> = trimfile.strip_suffix(".log");
+    let writefile: &str = slash.unwrap_or_default();
+    let _ = iterwrite(extracted, &writefile, "_strings.log");
+
+    Ok(())
+}
+
+
+fn extract(part: String, focus: &str, delim: &str) -> String {
+    let mut gotcha: String = String::from("");
+    match part.split_once(focus) {
+        Some((_first, second)) => {
+            match second.split_once(delim) {
+                Some((first, _second)) => {
+                    gotcha = first.to_string();
+                }
+                None => println!("Inner: {}", part)
+            }
+        },
+        None => { println!("Outer: {}", part);
+        },
+    }
+    gotcha
+}
+
+
+// Read a file line by line and append the results to a String Vector
+fn transform(filepath: String) -> Result<Vec<String>> {
+    let f: File = File::open(&filepath).expect("Unable to open file");
+    let reader: BufReader<File> = BufReader::new(f);
+    let mut contents: Vec<String> = Vec::new();
+
+    for line in reader.lines() {
+        contents.push(line?);
+    }
+
+    Ok(contents)
+}
+
+
+// Search a vector for duplicate items
+fn doppleganger<T: Eq + std::hash::Hash + Clone>(vec: &Vec<T>) -> Vec<T> {
+    let mut seen: HashSet<T> = HashSet::new();
+    let mut duplicates: HashSet<T> = HashSet::new();
+    let mut result: Vec<T> = Vec::new();
+
+    for item in vec {
+        if seen.contains(&item) {
+            duplicates.insert(item.clone());
+        }
+        seen.insert(item.clone());
+    }
+
+    for item in duplicates {
+        result.push(item);
+    }
+
+    result
+}
+
+
+fn iterwrite(contents: Vec<String>, destination: &str, extension: &str) -> Result<()> {
     let mut f2: File = File::create(destination.to_owned() + extension).expect("Unable to create file");
 
-    for element in container.iter() {
+    for element in contents {
         writeln!(f2, "{}", element)?;
+    }
+
+    Ok(())
+}
+
+
+fn iteratecsv(contents: Vec<String>, destination: &str, extension: &str) -> Result<()> {
+    let mut f2: File = File::create(destination.to_owned() + extension).expect("Unable to create file");
+
+    for element in contents {
+        write!(f2, "{}", element)?;
     }
 
     Ok(())

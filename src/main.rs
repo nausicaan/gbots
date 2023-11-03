@@ -22,32 +22,53 @@ fn main() {
     months.insert(String::from(tasks::NAMES[10]), String::from("11"));
     months.insert(String::from(tasks::NAMES[11]), String::from("12"));
 
-    if passed.len() > 1 {
-        let task: &String = &passed[1];
-        let month: &String = &passed[2];
-        let days: Vec<String> = tasks::generate(&months, &month);
-        // let site: &str = &passed[3];
-        if task == "download" {
+    if passed.len() == 0 {
+        alert(" No arguments provided, ");
+    }
+
+    if passed.len() == 2 {
+        if &passed[1] == "help" || &passed[1] == "h" {
+            about();
+        } else {
+            warn(" More parameters needed ");
+        }
+    }
+
+    if passed.len() == 3 {
+        if passed[1] == "download" || passed[1] == "d" {
             message("Downloading Compressed Log Files");
-            tasks::download(&months, &month, &days);
+            let days: Vec<String> = tasks::generate(&months, &passed[2]);
+            tasks::download(&months, &passed[2], &days);
             println!();
-        } else if task == "unzip" {
+        } else if passed[1] == "unzip" || passed[1] == "u" {
             message("Unzipping Compressed Log Files");
-			tasks::unzip(&month);
+			tasks::unzip(&passed[2]);
             println!();
-        } else if task == "filter" {
-            message("Searching for Hits to Target URL");
-            tasks::manipulate(&("filtered for ".to_owned() + &passed[3] + " hits"), &month, "/unzipped/",  &passed[3]);
+        } else if passed[1] == "capture" || passed[1] == "c" {
+            message("Capturing all existing search strings");
+            tasks::pattern(&passed[2]);
             println!();
-        } else if task == "divide" {
-            message("Dividing Data into Google and Non-Google Hits");
-            tasks::manipulate("divided", &month, "/filtered/",  &passed[3]);
+        } else if passed[1] == "analyze" || passed[1] == "a" {
+            message("Discovering if search strings are repeated");
+            tasks::single_tally("moogle", &passed[2], "nginx_access_20230914_google_strings.log");
             println!();
         } else {
-            warn(" Arguments not recognized ");
+            warn(" Task not recognized ");
         }
-    } else {
-        alert(" No arguments provided, ");
+    }
+
+    if passed.len() == 4 {
+        if passed[1] == "filter" || passed[1] == "f" {
+            message("Searching for Hits to Target URL");
+            tasks::manipulate(&("filtered for ".to_owned() + &passed[3] + " hits"), &passed[2], "/unzipped/",  &passed[3]);
+            println!();
+        } else if passed[1] == "divide" || passed[1] == "v" {
+            message("Dividing Data into Google and Non-Google Hits");
+            tasks::manipulate("divided", &passed[2], "/filtered/",  &passed[3]);
+            println!();
+        } else {
+            warn(" Task not recognized ");
+        }
     }
 }
 
@@ -64,4 +85,25 @@ fn warn(content: &str) {
 // Print colourized error messages
 fn alert(content: &str) {
     println!("\n{}{}", content.on_bright_red(), HALT.on_bright_red());
+}
+
+// Print help information for using the program
+fn about() {
+	println!("\n{}", "Usage:".yellow());
+	println!("  [program] [task] [month] [site]");
+	println!("{}", "\nOptions:".yellow());
+	println!("{}    Download Compressed Log Files", " d,  download".green());
+	println!("{}	 Unzip Compressed Log Files", " u,  unzip".green());
+	println!("{}	 Search for Hits to Target URL", " f,  filter".green());
+	println!("{}	 Divide Data into Google and Non-Google Hits", " v,  divide".green());
+	println!("{}	 Capture all existing search strings", " c,  capture".green());
+	println!("{}	 Discover if search strings are repeated", " a,  analyze".green());
+	println!("{}        Help Information", " h,  help".green());
+	println!("{}", "\nExample:".yellow());
+	println!("  Pointing at your target/release folder, run:");
+	println!("{}", "    googlebot f september emergencyinfobc    ".green());
+	println!("{}", "\nHelp:".yellow());
+	println!("  For more information go to:");
+	println!("{}", "    https://github.com/nausicaan/gbots.git".green());
+    println!();
 }

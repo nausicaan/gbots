@@ -14,7 +14,7 @@ Variables declared in a tasks/vars.rs file:
 
 ## Run
 
-Navigate to the folder containing your *accounts.yaml* file and (dependent on the location of your inventory file) run:
+Navigate to the folder containing your *src* folder and run:
 
 ``` console
 ./googlebot [task] [month] [targeted site]
@@ -31,8 +31,10 @@ Available tasks:
 - **unzip**: Decompress the .gz files previously downloaded.
 - **filter**: Create a file only containg hits to the target site.
 - **divide**: Divide the filtered file into one file containing googlebot hits and another containing everything else.
+- **capture**: Capture all existing search strings.
+- **analyze**: Discover if search strings are repeated.
 
-**Note**: Tasks depend on a *PREFIX/month/type/server_name* file structure ( ex. ~/june/unzipped/iss), and the assumption that compressed log files have an *nginx_access.log-20230909.gz* naming scheme.
+**Note**: Tasks depend on a *PREFIX/server_name/type/month* file structure ( ex. ~iss/unzipped/june/), and the assumption that compressed log files have an *nginx_access.log-20230909.gz* naming scheme.
 
 ## License
 
