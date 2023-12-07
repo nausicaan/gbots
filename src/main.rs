@@ -50,7 +50,7 @@ fn main() {
             println!();
         } else if passed[1] == "analyze" || passed[1] == "a" {
             message("Discovering if search strings are repeated");
-            tasks::single_tally("moogle", &passed[2], "nginx_access_20230914_google_strings.log");
+            tasks::tally(&passed[2]);
             println!();
         } else {
             warn(" Task not recognized ");

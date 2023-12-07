@@ -1,12 +1,10 @@
-
-// use std::io::{BufRead, BufReader, Result, Write, Read};
-use std::{fs, fs::File, io::{stdout, Write, BufRead, BufReader, Result, Read, Stdout}, collections::HashSet, collections::HashMap, process::Command, thread::sleep, time::Duration};
+use std::{fs, fs::File, io::{stdout, Write, BufRead, BufReader, Result, Read}, collections::HashSet, collections::HashMap, process::Command, thread::sleep, time::Duration};
 use flate2::read::GzDecoder;
 use colored::Colorize;
 pub mod vars;
 
 // Insert some key-value pairs into days
-pub static NAMES: [&str; 12] = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "novemeber", "december"];
+pub static NAMES: [&str; 12] = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
 // Create a slice with the appropriate number of days for that month
 pub fn generate(months: &HashMap<String, String>, month: &String) -> Vec<String> {
@@ -56,25 +54,18 @@ pub fn download(months: &HashMap<String, String>, month: &String, days: &Vec<Str
 
     for server in vars::SERVERS {
         let destination: String = vars::PREFIX.to_owned() + server + "/zipped/" + month;
-        let mut stdout: Stdout = stdout();
-        let mut index: usize = 0;
 
         for day in days {
-            let source: String = String::from(vars::IDENTITY.to_owned() + server + "/nginx_access.log-2023" + &day + ".gz ");
+            let source: String = String::from(vars::IDENTITY.to_owned() + server + "/nginx_access.log-2023" + &months[month] + &day + ".gz");
             Command::new("scp")
-            .arg(&source)
-            .arg(&destination)
+            .args([&source, &destination])
             .spawn()
             .expect("scp command failed to start");
-            print!("\rFile {}{}{} ( {} of {} ) in {} dowloaded ", "nginx_access.log-2023".green(), months[month].green(), days[index].green(), (index + 1), days.len(), server.yellow());
-            stdout.flush().unwrap();
-            sleep(Duration::from_millis(100));
-            index += 1;
         }
     }
 }
 
-
+// Extract data from .gz compressed files
 pub fn unzip(month: &String) {
 
     for server in vars::SERVERS {
@@ -90,7 +81,7 @@ pub fn unzip(month: &String) {
             decompress(vars::PREFIX.to_owned() + server  + "/zipped/" + month + "/" + &file, vars::PREFIX.to_owned() + server + "/unzipped/" + month + "/" + &result);
             print!("\rFile {} ( {} of {} ) in {} unzipped ", file.green(), (index + 1), total, server.yellow());
             stdout.flush().unwrap();
-            sleep(Duration::from_millis(100));
+            sleep(Duration::from_millis(200));
             index += 1;
         }
     }
@@ -113,7 +104,7 @@ pub fn manipulate(action: &str, month: &String, source: &str, site: &str) {
             }
             print!("\rFile {} ( {} of {} ) in {} {} ", file.green(), (index + 1), total, server.yellow(), action);
             stdout.flush().unwrap();
-            sleep(Duration::from_millis(100));
+            sleep(Duration::from_millis(200));
             index += 1;
         }
     }
@@ -132,14 +123,14 @@ pub fn pattern(month: &String) {
             let _ = search(server, &file, month);
             print!("\rFile {} ( {} of {} ) in {} captured ", file.green(), (index + 1), total, server.yellow());
             stdout.flush().unwrap();
-            sleep(Duration::from_millis(100));
+            sleep(Duration::from_millis(200));
             index += 1;
         }
     }
 }
 
 
-pub fn _tally(month: &String) {
+pub fn tally(month: &String) {
     
     for server in vars::SERVERS {
         let files: Vec<String> = directory(vars::PREFIX.to_owned() + server + "/captured/" + month);
@@ -162,16 +153,16 @@ pub fn _tally(month: &String) {
             let trimfile: String = vars::PREFIX.to_owned() + server + "/analyzed/" + month + "/" + &file;
             let slash:Option<&str> = trimfile.strip_suffix(".log");
             let writefile: &str = slash.unwrap_or_default();
-            let _ = iteratecsv(solution, writefile, ".csv");
-            print!("\rFile {} ( {} of {} ) in {} captured ", file.green(), (index + 1), total, server.yellow());
+            let _ = iterwrite(solution, writefile, ".csv");
+            print!("\rFile {} ( {} of {} ) in {} analyzed ", file.green(), (index + 1), total, server.yellow());
             stdout.flush().unwrap();
-            sleep(Duration::from_millis(100));
+            sleep(Duration::from_millis(200));
             index += 1;
         }
     }
 }
 
-pub fn single_tally(server: &str, month: &String, file: &str) {
+pub fn _single_tally(server: &str, month: &String, file: &str) {
     print!("\rAnalyzing {} in {} ", file.green(), server.yellow());
     let mut solution: Vec<String> = Vec::new();
     solution.push(String::from("Count,Search_String\n"));
@@ -188,7 +179,7 @@ pub fn single_tally(server: &str, month: &String, file: &str) {
     let trimfile: String = vars::PREFIX.to_owned() + server + "/analyzed/" + month + "/" + &file;
     let slash:Option<&str> = trimfile.strip_suffix(".log");
     let writefile: &str = slash.unwrap_or_default();
-    let _ = iteratecsv(solution, writefile, ".csv");
+    let _ = iterwrite(solution, writefile, ".csv");
 }
 
 
@@ -212,7 +203,7 @@ fn directory(location: String) -> Vec<String> {
     nginx
 }
 
-
+// Decompress a zipped file and write the value to a new file
 fn decompress(readfile: String, writefile: String) {
     // Open the .gz file
     let file: File = File::open(readfile).expect("Unable to open file");
@@ -367,7 +358,7 @@ fn doppleganger<T: Eq + std::hash::Hash + Clone>(vec: &Vec<T>) -> Vec<T> {
     result
 }
 
-
+// Write 
 fn iterwrite(contents: Vec<String>, destination: &str, extension: &str) -> Result<()> {
     let mut f2: File = File::create(destination.to_owned() + extension).expect("Unable to create file");
 
@@ -379,7 +370,7 @@ fn iterwrite(contents: Vec<String>, destination: &str, extension: &str) -> Resul
 }
 
 
-fn iteratecsv(contents: Vec<String>, destination: &str, extension: &str) -> Result<()> {
+fn _iteratecsv(contents: Vec<String>, destination: &str, extension: &str) -> Result<()> {
     let mut f2: File = File::create(destination.to_owned() + extension).expect("Unable to create file");
 
     for element in contents {
