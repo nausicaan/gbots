@@ -65,6 +65,7 @@ pub fn download(months: &HashMap<String, String>, month: &String, days: &Vec<Str
     }
 }
 
+
 // Extract data from .gz compressed files
 pub fn unzip(month: &String) {
 
@@ -88,6 +89,7 @@ pub fn unzip(month: &String) {
 }
 
 
+// Direct the program towards either the separate or isolate function depending on objective
 pub fn manipulate(action: &str, month: &String, source: &str, site: &str) {
 
     for server in vars::SERVERS {
@@ -111,6 +113,7 @@ pub fn manipulate(action: &str, month: &String, source: &str, site: &str) {
 }
 
 
+// Discover the different types of search strings in use
 pub fn pattern(month: &String) {
     
     for server in vars::SERVERS {
@@ -130,6 +133,7 @@ pub fn pattern(month: &String) {
 }
 
 
+// Collate all the search strings to find the most popular
 pub fn tally(month: &String) {
     
     for server in vars::SERVERS {
@@ -162,30 +166,11 @@ pub fn tally(month: &String) {
     }
 }
 
-pub fn _single_tally(server: &str, month: &String, file: &str) {
-    print!("\rAnalyzing {} in {} ", file.green(), server.yellow());
-    let mut solution: Vec<String> = Vec::new();
-    solution.push(String::from("Count,Search_String\n"));
-
-    if let Ok(s) = transform(vars::PREFIX.to_owned() + server  + "/captured/" + month + "/" + &file) {
-        let duplicates: Vec<String> = doppleganger(&s);
-        for d in duplicates {
-            let occurrences: usize = s.clone().iter().filter(|&s| s == &d).count();
-            let dta: String = occurrences.to_string() + "," + &d + "\n";
-            solution.push(dta);
-        }
-    }
-
-    let trimfile: String = vars::PREFIX.to_owned() + server + "/analyzed/" + month + "/" + &file;
-    let slash:Option<&str> = trimfile.strip_suffix(".log");
-    let writefile: &str = slash.unwrap_or_default();
-    let _ = iterwrite(solution, writefile, ".csv");
-}
-
 
 /* ---------- Private Functions ---------- */
 
 
+// Read the contents of a folder
 fn directory(location: String) -> Vec<String> {
 
     let mut nginx: Vec<String> = Vec::new();
@@ -202,6 +187,7 @@ fn directory(location: String) -> Vec<String> {
     }
     nginx
 }
+
 
 // Decompress a zipped file and write the value to a new file
 fn decompress(readfile: String, writefile: String) {
@@ -274,7 +260,7 @@ fn separate(server: &str, filename: &String, month: &String) -> Result<()> {
 }
 
 
-// Divide Data into Google and Non-Google Hits
+// Search for legitimate HTTP request data
 fn search(server: &str, filename: &String, month: &String) -> Result<()> {
 
     let readfile: String = vars::PREFIX.to_owned() + server + "/divided/" + "/" + month + "/" + filename;
@@ -306,6 +292,7 @@ fn search(server: &str, filename: &String, month: &String) -> Result<()> {
 }
 
 
+// Pull out only specified data
 fn extract(part: String, focus: &str, delim: &str) -> String {
     let mut gotcha: String = String::from("");
     match part.split_once(focus) {
@@ -358,23 +345,13 @@ fn doppleganger<T: Eq + std::hash::Hash + Clone>(vec: &Vec<T>) -> Vec<T> {
     result
 }
 
-// Write 
+
+// Write to a file
 fn iterwrite(contents: Vec<String>, destination: &str, extension: &str) -> Result<()> {
     let mut f2: File = File::create(destination.to_owned() + extension).expect("Unable to create file");
 
     for element in contents {
         writeln!(f2, "{}", element)?;
-    }
-
-    Ok(())
-}
-
-
-fn _iteratecsv(contents: Vec<String>, destination: &str, extension: &str) -> Result<()> {
-    let mut f2: File = File::create(destination.to_owned() + extension).expect("Unable to create file");
-
-    for element in contents {
-        write!(f2, "{}", element)?;
     }
 
     Ok(())

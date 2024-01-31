@@ -34,7 +34,7 @@ Available tasks:
 - **capture**: Capture all existing search strings.
 - **analyze**: Discover if search strings are repeated.
 
-**Note**: Tasks depend on a *PREFIX/server_name/type/month* file structure ( ex. ~/iss/unzipped/june/), and the assumption that compressed log files have an *nginx_access.log-20230909.gz* naming scheme.
+**Note**: Tasks depend on a *PREFIX/server_name/type/month* file structure ( ex. ~/iss/unzipped/june/), and the assumption that compressed log files have an *nginx_access.log-20230922.gz* naming scheme.
 
 ## License
 
