@@ -76,11 +76,11 @@ pub fn unzip(month: &String) {
         let total: usize = files.len();
 
         for file in files {
+            print!("\rUnzipping file {} ( {} of {} ) in {} ", file.green(), (index + 1), total, server.yellow());
             let result: &str = &file.replace(".gz", "");
             let result: &str = &result.replace(".log-", "_");
             let result = result.to_owned() + ".log";
             decompress(vars::PREFIX.to_owned() + server  + "/zipped/" + month + "/" + &file, vars::PREFIX.to_owned() + server + "/unzipped/" + month + "/" + &result);
-            print!("\rFile {} ( {} of {} ) in {} unzipped ", file.green(), (index + 1), total, server.yellow());
             stdout.flush().unwrap();
             sleep(Duration::from_millis(200));
             index += 1;
@@ -99,12 +99,12 @@ pub fn manipulate(action: &str, month: &String, source: &str, site: &str) {
         let mut index: usize = 0;
 
         for file in files {
-            if action == "divided" {
+            print!("\r{} file {} ( {} of {} ) in {} ", file.green(), (index + 1), total, server.yellow(), action);
+            if action == "Dividing" {
                 let _ = separate(&server, &file, &month);
             } else {
                 let _ = isolate(&server, &file, &month, &site);
             }
-            print!("\rFile {} ( {} of {} ) in {} {} ", file.green(), (index + 1), total, server.yellow(), action);
             stdout.flush().unwrap();
             sleep(Duration::from_millis(200));
             index += 1;
@@ -123,8 +123,8 @@ pub fn pattern(month: &String) {
         let mut index: usize = 0;
 
         for file in files {
+            print!("\rCapturing file {} ( {} of {} ) in {} ", file.green(), (index + 1), total, server.yellow());
             let _ = search(server, &file, month);
-            print!("\rFile {} ( {} of {} ) in {} captured ", file.green(), (index + 1), total, server.yellow());
             stdout.flush().unwrap();
             sleep(Duration::from_millis(200));
             index += 1;
@@ -143,9 +143,10 @@ pub fn tally(month: &String) {
         let mut index: usize = 0;
 
         for file in files {
+            print!("\rAnalyzing file {} ( {} of {} ) in {} ", file.green(), (index + 1), total, server.yellow());
             let mut solution: Vec<String> = Vec::new();
             solution.push(String::from("Count,Search_String\n"));
-            if let Ok(s) = transform(vars::PREFIX.to_owned() + server  + "/captured/" + month + "/" + &file) {
+            if let Ok(s) = transform(vars::PREFIX.to_owned() + server + "/captured/" + month + "/" + &file) {
                 let duplicates: Vec<String> = doppleganger(&s);
                 for d in duplicates {
                     let occurrences: usize = s.clone().iter().filter(|&s| s == &d).count();
@@ -157,8 +158,7 @@ pub fn tally(month: &String) {
             let trimfile: String = vars::PREFIX.to_owned() + server + "/analyzed/" + month + "/" + &file;
             let slash:Option<&str> = trimfile.strip_suffix(".log");
             let writefile: &str = slash.unwrap_or_default();
-            let _ = iterwrite(solution, writefile, ".csv");
-            print!("\rFile {} ( {} of {} ) in {} analyzed ", file.green(), (index + 1), total, server.yellow());
+            let _ = iterwrite(&solution, writefile, ".csv");
             stdout.flush().unwrap();
             sleep(Duration::from_millis(200));
             index += 1;
@@ -226,7 +226,7 @@ fn isolate(server: &str, filename: &String, month: &String, site: &str) -> Resul
     }
 
     let writefile: String = vars::PREFIX.to_owned() + server + "/filtered/" + month + "/" + filename;
-    let _ = iterwrite(eibc, &writefile, "");
+    let _ = iterwrite(&eibc, &writefile, "");
 
     Ok(())
 }
@@ -253,8 +253,8 @@ fn separate(server: &str, filename: &String, month: &String) -> Result<()> {
     let trimfile: String = vars::PREFIX.to_owned() + server + "/divided/" + month + "/" + filename;
     let slash:Option<&str> = trimfile.strip_suffix(".log");
     let writefile: &str = slash.unwrap_or_default();
-    let _ = iterwrite(gbot, &writefile, "_google.log");
-    let _ = iterwrite(obot, &writefile, "_others.log");
+    let _ = iterwrite(&gbot, &writefile, "_google.log");
+    let _ = iterwrite(&obot, &writefile, "_others.log");
 
     Ok(())
 }
@@ -286,7 +286,7 @@ fn search(server: &str, filename: &String, month: &String) -> Result<()> {
     let trimfile: String = vars::PREFIX.to_owned() + server + "/captured/" + month + "/" + filename;
     let slash:Option<&str> = trimfile.strip_suffix(".log");
     let writefile: &str = slash.unwrap_or_default();
-    let _ = iterwrite(extracted, &writefile, "_strings.log");
+    let _ = iterwrite(&extracted, &writefile, "_strings.log");
 
     Ok(())
 }
@@ -347,7 +347,7 @@ fn doppleganger<T: Eq + std::hash::Hash + Clone>(vec: &Vec<T>) -> Vec<T> {
 
 
 // Write to a file
-fn iterwrite(contents: Vec<String>, destination: &str, extension: &str) -> Result<()> {
+fn iterwrite(contents: &Vec<String>, destination: &str, extension: &str) -> Result<()> {
     let mut f2: File = File::create(destination.to_owned() + extension).expect("Unable to create file");
 
     for element in contents {

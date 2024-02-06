@@ -1,5 +1,7 @@
 use std::{collections::HashMap, env};
 use colored::Colorize;
+
+use crate::tasks::vars::TARGET;
 mod tasks;
 
 const HALT: &'static str = "program halted ";
@@ -44,6 +46,14 @@ fn main() {
             message("Unzipping Compressed Log Files");
 			tasks::unzip(&passed[2]);
             println!();
+        } else if passed[1] == "filter" || passed[1] == "f" {
+            message("Searching for Hits to Target URL");
+            tasks::manipulate(&("Filtering for ".to_owned() + &passed[3] + " hits "), &passed[2], "/unzipped/",  TARGET);
+            println!();
+        } else if passed[1] == "divide" || passed[1] == "v" {
+            message("Dividing Data into Google and Non-Google Hits");
+            tasks::manipulate("Dividing", &passed[2], "/filtered/", TARGET);
+            println!();
         } else if passed[1] == "capture" || passed[1] == "c" {
             message("Capturing all existing search strings");
             tasks::pattern(&passed[2]);
@@ -57,18 +67,8 @@ fn main() {
         }
     }
 
-    if passed.len() == 4 {
-        if passed[1] == "filter" || passed[1] == "f" {
-            message("Searching for Hits to Target URL");
-            tasks::manipulate(&("filtered for ".to_owned() + &passed[3] + " hits"), &passed[2], "/unzipped/",  &passed[3]);
-            println!();
-        } else if passed[1] == "divide" || passed[1] == "v" {
-            message("Dividing Data into Google and Non-Google Hits");
-            tasks::manipulate("divided", &passed[2], "/filtered/",  &passed[3]);
-            println!();
-        } else {
-            warn(" Task not recognized ");
-        }
+    if passed.len() >= 4 {
+        warn(" Too many arguments supplied ");
     }
 }
 

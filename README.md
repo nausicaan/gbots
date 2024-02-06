@@ -11,19 +11,20 @@ Variables declared in a tasks/vars.rs file:
 - SERVERS: Array of applicable servers.
 - IDENTITY: SSH credentials plus folder path ( ex. username@server:/folder/ ).
 - PREFIX: Base path to store all files.
+- TARGET: The site url to investigate.
 
 ## Run
 
 Navigate to the folder containing your *src* folder and run:
 
 ``` console
-./googlebot [task] [month] [targeted site]
+./googlebot [task] [month]
 ```
 
 ## Example
 
 ``` console
-./googlebot filter july google.com
+./googlebot filter july
 ```
 
 Available tasks: 
