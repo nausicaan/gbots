@@ -1,4 +1,4 @@
-use std::{fs, fs::File, io::{stdout, Write, BufRead, BufReader, Result, Read}, collections::HashSet, collections::HashMap, process::Command, thread::sleep, time::Duration};
+use std::{collections::{HashMap, HashSet}, fs::{self, File, OpenOptions}, io::{stdout, BufRead, BufReader, Read, Result, Write}, process::Command, thread::sleep, time::Duration};
 use flate2::read::GzDecoder;
 use colored::Colorize;
 pub mod vars;
@@ -48,7 +48,6 @@ pub fn generate(months: &HashMap<String, String>, month: &String) -> Vec<String>
     digits
 }
 
-
 // Download the log files from freedom.bcgov
 pub fn download(months: &HashMap<String, String>, month: &String, days: &Vec<String>) {
 
@@ -56,7 +55,8 @@ pub fn download(months: &HashMap<String, String>, month: &String, days: &Vec<Str
         let destination: String = vars::PREFIX.to_owned() + server + "/zipped/" + month;
 
         for day in days {
-            let source: String = String::from(vars::IDENTITY.to_owned() + server + "/nginx_access.log-2023" + &months[month] + &day + ".gz");
+            let source: String = String::from(vars::IDENTITY.to_owned() + server + "/nginx_access.log-2024" + &months[month] + &day + ".gz");
+            sleep(Duration::from_millis(200));
             Command::new("scp")
             .args([&source, &destination])
             .spawn()
@@ -76,14 +76,14 @@ pub fn unzip(month: &String) {
         let total: usize = files.len();
 
         for file in files {
-            print!("\rUnzipping file {} ( {} of {} ) in {} ", file.green(), (index + 1), total, server.yellow());
+            sleep(Duration::from_millis(200));
             let result: &str = &file.replace(".gz", "");
             let result: &str = &result.replace(".log-", "_");
             let result = result.to_owned() + ".log";
             decompress(vars::PREFIX.to_owned() + server  + "/zipped/" + month + "/" + &file, vars::PREFIX.to_owned() + server + "/unzipped/" + month + "/" + &result);
             stdout.flush().unwrap();
-            sleep(Duration::from_millis(200));
             index += 1;
+            print!("Unzipped file {} ( {} of {} ) in {}\n", file.green(), (index), total, server.yellow());
         }
     }
 }
@@ -99,15 +99,15 @@ pub fn manipulate(action: &str, month: &String, source: &str, site: &str) {
         let mut index: usize = 0;
 
         for file in files {
-            print!("\r{} file {} ( {} of {} ) in {} ", file.green(), (index + 1), total, server.yellow(), action);
-            if action == "Dividing" {
+            sleep(Duration::from_millis(200));
+            if action == "Divided" {
                 let _ = separate(&server, &file, &month);
             } else {
                 let _ = isolate(&server, &file, &month, &site);
             }
             stdout.flush().unwrap();
-            sleep(Duration::from_millis(200));
             index += 1;
+            print!("{} file {} ( {} of {} ) in {}\n", action, file.green(), (index), total, server.yellow());
         }
     }
 }
@@ -123,11 +123,11 @@ pub fn pattern(month: &String) {
         let mut index: usize = 0;
 
         for file in files {
-            print!("\rCapturing file {} ( {} of {} ) in {} ", file.green(), (index + 1), total, server.yellow());
+            sleep(Duration::from_millis(200));
             let _ = search(server, &file, month);
             stdout.flush().unwrap();
-            sleep(Duration::from_millis(200));
             index += 1;
+            print!("Captured file {} ( {} of {} ) in {}\n", file.green(), (index), total, server.yellow());
         }
     }
 }
@@ -143,25 +143,25 @@ pub fn tally(month: &String) {
         let mut index: usize = 0;
 
         for file in files {
-            print!("\rAnalyzing file {} ( {} of {} ) in {} ", file.green(), (index + 1), total, server.yellow());
-            let mut solution: Vec<String> = Vec::new();
-            solution.push(String::from("Count,Search_String\n"));
+            sleep(Duration::from_millis(200));
             if let Ok(s) = transform(vars::PREFIX.to_owned() + server + "/captured/" + month + "/" + &file) {
+                let trimfile: String = vars::PREFIX.to_owned() + server + "/analyzed/" + month + "/" + &file;
+                let slash:Option<&str> = trimfile.strip_suffix(".log");
+                let writefile: &str = slash.unwrap_or_default();
+
+                let mut headrow: File = File::create(writefile.to_owned() + ".csv").expect("Unable to create file");
+                let _ = headrow.write("Count,Search_String\n".as_bytes());
+
                 let duplicates: Vec<String> = doppleganger(&s);
                 for d in duplicates {
                     let occurrences: usize = s.clone().iter().filter(|&s| s == &d).count();
                     let data_to_append: String = occurrences.to_string() + "," + &d + "\n";
-                    solution.push(data_to_append);
+                    let _ = dictate(&data_to_append, writefile);
                 }
             }
-
-            let trimfile: String = vars::PREFIX.to_owned() + server + "/analyzed/" + month + "/" + &file;
-            let slash:Option<&str> = trimfile.strip_suffix(".log");
-            let writefile: &str = slash.unwrap_or_default();
-            let _ = iterwrite(&solution, writefile, ".csv");
             stdout.flush().unwrap();
-            sleep(Duration::from_millis(200));
             index += 1;
+            print!("Analyzed file {} ( {} of {} ) in {}\n", file.green(), (index), total, server.yellow());
         }
     }
 }
@@ -353,6 +353,22 @@ fn iterwrite(contents: &Vec<String>, destination: &str, extension: &str) -> Resu
     for element in contents {
         writeln!(f2, "{}", element)?;
     }
+
+    Ok(())
+}
+
+fn dictate(data: &str, destination: &str) -> std::io::Result<()> {
+    // Open the file in append mode, creating it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(destination.to_owned() + ".csv")?;
+
+    // Add the header row
+    // file.write("Count,Search_String\n".as_bytes())?;
+
+    // Write the data to the file
+    file.write_all(data.as_bytes())?;
 
     Ok(())
 }

@@ -48,11 +48,11 @@ fn main() {
             println!();
         } else if passed[1] == "filter" || passed[1] == "f" {
             message("Searching for Hits to Target URL");
-            tasks::manipulate(&("Filtering for ".to_owned() + &passed[3] + " hits "), &passed[2], "/unzipped/",  TARGET);
+            tasks::manipulate(&("Filtering for ".to_owned() + TARGET + " hits"), &passed[2], "/unzipped/",  TARGET);
             println!();
         } else if passed[1] == "divide" || passed[1] == "v" {
             message("Dividing Data into Google and Non-Google Hits");
-            tasks::manipulate("Dividing", &passed[2], "/filtered/", TARGET);
+            tasks::manipulate("Divided", &passed[2], "/filtered/", TARGET);
             println!();
         } else if passed[1] == "capture" || passed[1] == "c" {
             message("Capturing all existing search strings");
@@ -61,6 +61,7 @@ fn main() {
         } else if passed[1] == "analyze" || passed[1] == "a" {
             message("Discovering if search strings are repeated");
             tasks::tally(&passed[2]);
+            // tasks::counter();
             println!();
         } else {
             warn(" Task not recognized ");
