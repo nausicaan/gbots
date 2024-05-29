@@ -364,9 +364,6 @@ fn dictate(data: &str, destination: &str) -> std::io::Result<()> {
         .append(true)
         .open(destination.to_owned() + ".csv")?;
 
-    // Add the header row
-    // file.write("Count,Search_String\n".as_bytes())?;
-
     // Write the data to the file
     file.write_all(data.as_bytes())?;
 

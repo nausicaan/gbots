@@ -61,7 +61,6 @@ fn main() {
         } else if passed[1] == "analyze" || passed[1] == "a" {
             message("Discovering if search strings are repeated");
             tasks::tally(&passed[2]);
-            // tasks::counter();
             println!();
         } else {
             warn(" Task not recognized ");
